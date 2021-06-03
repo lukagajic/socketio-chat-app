@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat app</title>
+    <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+        font-family: "Calibri", sans-serif;
+      }
+      .d-none {
+        display: none !important;
+      }
+      .text-center {
+        text-align: center;
+      }
+      #login-input {
+        padding: 7px;
+        width: 350px;
+        font-size: 17px;
+        text-align: center;
+      }
+      #login-form {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      #login-form > * {
+        margin: 5px;
+      }
+      #login-button {
+        padding: 7px;
+        font-size: 15px;
+      }
+      #login-form {
+        padding: 25px;
+        border: 2px solid rgb(255, 99, 71);
+        margin: 0px auto;
+        width: 30%;
+        margin-top: 20px;
+      }
+      #chat-form {
+        padding: 25px;
+        border: 2px solid rgb(255, 99, 71);
+        margin: 0px auto;
+        width: 70%;
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+      }
+      #chat-input {
+        padding: 10px;
+        font-size: 19px;
+        width: 80%;
+        margin-right: 10px;
+      }
+      #chat-button {
+        font-size: 19px;
+        padding: 0px 10px 0px 10px;
+      }
+      #messages {
+        padding: 25px;
+        border: 2px solid rgb(255, 99, 71);
+        margin: 0px auto;
+        width: 70%;
+        margin-top: 20px;
+        min-height: 150px;
+      }
+      #typing {
+        margin: 0px auto;
+        width: 70%;
+        padding: 25px;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="login-form">
+      <input
+        autofocus
+        id="login-input"
+        type="text"
+        max="64"
+        min="5"
+        required
+        placeholder="Enter your username"
+      />
+      <button id="login-button" type="submit">Join</button>
+    </form>
+
+    <h2 class="text-center" id="user"></h2>
+
+    <div id="messages" class="d-none"></div>
+    <p id="typing"></p>
+
+    <form id="chat-form" class="d-none">
+      <input
+        id="chat-input"
+        type="text"
+        required
+        min="1"
+        max="1000"
+        placeholder="Enter your message..."
+      />
+      <button id="chat-button" type="submit">Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io.connect();
+
+      function addMessage(message, user = undefined) {
+        const item = document.createElement("p");
+        if (user) {
+          item.innerHTML = `<strong>${user}: </strong>${message}`;
+        } else {
+          item.classList.add("text-center");
+          item.innerHTML = `<strong>${message}</strong>`;
+        }
+        messages.appendChild(item);
+      }
+
+      function setTyping(message) {
+        typing.innerHTML = message;
+      }
+
+      const loginForm = document.getElementById("login-form");
+      const loginInput = document.getElementById("login-input");
+      const messages = document.getElementById("messages");
+      const chatForm = document.getElementById("chat-form");
+      const chatInput = document.getElementById("chat-input");
+      const user = document.getElementById("user");
+      const typing = document.getElementById("typing");
+
+      let username = "";
+
+      loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        if (loginInput.value) {
+          socket.emit("login", loginInput.value);
+        }
+
+        loginForm.classList.add("d-none");
+        chatForm.classList.remove("d-none");
+        messages.classList.remove("d-none");
+        username = loginInput.value;
+        user.textContent = `Joined as: ${loginInput.value}`;
+        loginInput.value = "";
+      });
+
+      socket.on("join", (data) => {
+        addMessage(data);
+      });
+
+      socket.on("chat", (data) => {
+        setTyping("");
+        addMessage(data.message, data.username);
+        chatInput.value = "";
+      });
+
+      chatInput.addEventListener("keypress", (e) => {
+        socket.emit("typing", `${username} is typing...`);
+      });
+
+      socket.on("typing", (data) => {
+        setTyping(data);
+      });
+
+      chatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        if (chatInput.value) {
+          socket.emit("chat", {
+            username: username,
+            message: chatInput.value,
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
